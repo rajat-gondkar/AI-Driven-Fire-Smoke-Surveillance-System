@@ -164,11 +164,11 @@ Final model performance:
 - Overall precision: 87.4%, recall: 83.2%
 
 ### Input
-- `Sample Video.mp4`
+- `Input.mp4`
   <video src="Input.mp4" controls width="320" height="240"></video>
 
 ### Output
-- `output_20250614_131203.mp4`
+- `Output.mp4`
   <video src="Output.mp4" controls width="320" height="240"></video>
 
 ## Understanding Detection Metrics
