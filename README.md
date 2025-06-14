@@ -163,6 +163,12 @@ Final model performance:
 - Smoke class: 77.7% mAP50, 61.0% mAP50-95
 - Overall precision: 87.4%, recall: 83.2%
 
+### Input
+- `/Users/rajat.gondkar/Desktop/fire and smoke detector/Sample Video.mp4`
+
+### Output
+- `/Users/rajat.gondkar/Desktop/fire and smoke detector/output_20250614_131203.mp4`
+
 ## Understanding Detection Metrics
 
 - **mAP50**: Mean Average Precision at 50% IoU threshold - accuracy when considering detections with 50% overlap with ground truth as correct
