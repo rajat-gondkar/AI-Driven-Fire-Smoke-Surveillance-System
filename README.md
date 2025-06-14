@@ -165,11 +165,11 @@ Final model performance:
 
 ### Input
 - `Sample Video.mp4`
-  <video src="Sample Video.mp4" controls width="320" height="240"></video>
+  <video src="Input.mp4" controls width="320" height="240"></video>
 
 ### Output
 - `output_20250614_131203.mp4`
-  <video src="output_20250614_131203.mp4" controls width="320" height="240"></video>
+  <video src="Output.mp4" controls width="320" height="240"></video>
 
 ## Understanding Detection Metrics
 
