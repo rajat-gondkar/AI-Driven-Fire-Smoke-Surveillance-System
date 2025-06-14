@@ -1,0 +1,9 @@
+ultralytics>=8.0.0
+opencv-python>=4.5.4
+numpy>=1.20.0
+flask>=2.0.0
+tqdm>=4.62.0
+torch>=1.9.0
+torchvision>=0.10.0
+pillow>=8.3.0
+streamlit>=1.25.0 
