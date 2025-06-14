@@ -164,10 +164,12 @@ Final model performance:
 - Overall precision: 87.4%, recall: 83.2%
 
 ### Input
-- `/Users/rajat.gondkar/Desktop/fire and smoke detector/Sample Video.mp4`
+- `Sample Video.mp4`
+  <video src="Sample Video.mp4" controls width="320" height="240"></video>
 
 ### Output
-- `/Users/rajat.gondkar/Desktop/fire and smoke detector/output_20250614_131203.mp4`
+- `output_20250614_131203.mp4`
+  <video src="output_20250614_131203.mp4" controls width="320" height="240"></video>
 
 ## Understanding Detection Metrics
 
