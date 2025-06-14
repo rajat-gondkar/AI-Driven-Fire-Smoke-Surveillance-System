@@ -212,11 +212,3 @@ This project includes utilities for dataset preparation:
    ```
    python data_utils.py extract --video path/to/video.mp4 --output extracted_frames --interval 30
    ```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details. 
