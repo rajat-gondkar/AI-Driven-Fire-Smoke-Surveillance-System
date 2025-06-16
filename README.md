@@ -1,222 +1,229 @@
 # Fire and Smoke Detection System
 
-Real-time fire and smoke detection in videos using YOLOv8 and Streamlit.
+A real-time fire and smoke detection system using YOLOv8 and Streamlit, designed to leverage existing CCTV infrastructure for rapid emergency response.
 
-## Overview
+---
 
-This project implements a real-time fire and smoke detection system using the YOLOv8 object detection model. It processes video files frame by frame to detect the presence of fire and smoke, offering visual alerts when either is detected in the video stream.
+## Motivation
 
-## Features
+In many urban and industrial setups, fire detection systems rely on costly and complex hardware installations. This project aims to repurpose widely available CCTV camera systems to detect fire and smoke using AI, enabling faster detection without the need for additional sensor installations. The system can also automatically notify relevant personnel in the event of a fire—complete with time, preset location, and a snapshot—allowing quick and effective response.
 
-- Real-time detection of fire and smoke in video footage
-- Interactive Streamlit web interface
+---
+
+## Key Features
+
+- Real-time fire and smoke detection in video feeds
+- Supports standard CCTV footage
+- Powered by YOLOv8 object detection
+- Streamlit-based interactive web interface
 - Upload and process video files
-- Visual alerts for fire and smoke detection
-- Performance metrics (FPS, detection counts)
-- Adjustable confidence threshold for detection sensitivity
-- Consecutive frame verification to reduce false alarms
-- Download processed videos with detection annotations
+- Visual alerts and detection stats
+- Adjustable confidence threshold
+- Consecutive-frame verification to reduce false alarms
+- Download processed, annotated videos
+- Automatic alert system with:
+  - Time of detection
+  - Preset location of camera
+  - Snapshot of fire/smoke detection frame
+
+---
 
 ## Requirements
 
 - Python 3.8 or higher
-- CUDA-compatible GPU (recommended for real-time performance, but works on CPU)
+- CUDA-compatible GPU (recommended)
+
+---
 
 ## Installation
 
-1. Clone this repository:
+1. Clone the repository:
 ```
 git clone https://github.com/yourusername/fire-smoke-detection.git
 cd fire-smoke-detection
 ```
 
-2. Install required packages:
+2. Install the required packages:
 ```
 pip install -r requirements.txt
 ```
+
+---
 
 ## Project Structure
 
 ```
 fire-smoke-detection/
-├── streamlit_app.py       # Streamlit web application
-├── train_model.py         # Training script for YOLOv8
-├── detect_fire_smoke.py   # Standalone detection script
-├── prepare_dataset.py     # Dataset preparation utilities
-├── data_utils.py          # Data augmentation utilities
-├── requirements.txt       # Project dependencies
-├── static/                # Static files for web app
-│   └── results/           # Folder for processed videos
-└── DATASET/               # Training dataset folder
+├── streamlit_app.py       # Streamlit web interface
+├── train_model.py         # Training script
+├── detect_fire_smoke.py   # Standalone detection
+├── prepare_dataset.py     # Dataset prep utilities
+├── data_utils.py          # Augmentation and extraction tools
+├── notifier.py            # Automatic alerting system (NEW)
+├── requirements.txt       
+├── static/
+│   └── results/           # Output videos
+└── DATASET/               # Training dataset
 ```
 
-## Dataset Structure
+---
 
-The project is configured to work with your existing dataset structure:
+## Dataset Format
 
 ```
 DATASET/
 ├── train/
-│   ├── images/ (training images)
-│   └── labels/ (training labels)
+│   ├── images/
+│   └── labels/
 ├── valid/
-│   ├── images/ (validation images)
-│   └── labels/ (validation labels)
+│   ├── images/
+│   └── labels/
 ├── test/
-│   ├── images/ (test images)
-│   └── labels/ (test labels)
-└── data.yaml (dataset configuration)
+│   ├── images/
+│   └── labels/
+└── data.yaml
 ```
 
-### Label Format
-
-Labels should be provided in YOLO format (one .txt file per image) with the following format:
+**YOLO Label Format:**
 ```
 class_id x_center y_center width height
 ```
 
-Where:
-- `class_id`: 0 for fire, 1 for smoke
-- `x_center`, `y_center`: normalized center coordinates (0-1)
-- `width`, `height`: normalized width and height (0-1)
+- `class_id`: 0 = fire, 1 = smoke
+- Coordinates and sizes normalized to [0, 1]
+
+---
 
 ## Usage
 
 ### 1. Train the Model
 
-To train the YOLOv8 model with your custom dataset:
-
 ```
 python train_model.py --data_path DATASET --epochs 5 --batch 16
 ```
 
-Parameters:
-- `--data_path`: Path to your dataset directory
-- `--epochs`: Number of training epochs (default: 5)
-- `--batch`: Batch size (default: 16)
-- `--img_size`: Image size for training (default: 640)
-- `--weights`: Initial weights for training (default: 'yolov8m.pt')
-
-### 2. Run Detection on a Single Video
-
-To process a single video file without the web interface:
+### 2. Run Detection on a Video
 
 ```
 python detect_fire_smoke.py --video path/to/video.mp4 --model path/to/model.pt
 ```
 
-Parameters:
-- `--video`: Path to the input video file
-- `--model`: Path to the YOLOv8 model (default: 'runs/detect/fire_smoke_detection2/weights/best.pt')
-- `--output`: Path to save the output video (optional)
-- `--conf`: Confidence threshold (default: 0.5)
-- `--no-display`: Run without displaying the video
+Optional flags:
+- `--output`: Output video path
+- `--conf`: Confidence threshold
+- `--no-display`: Disable live video preview
 
-### 3. Run the Streamlit Web Interface
+### 3. Run Web App
 
 ```
 streamlit run streamlit_app.py
 ```
 
-The Streamlit interface will automatically open in your default web browser.
+---
 
-## Streamlit Interface Usage
+## Streamlit Interface Overview
 
-1. The interface is divided into two main sections:
-   - Left panel: Upload controls and detection statistics
-   - Right panel: Video display and results
+- Left Panel: Upload, model selection, settings
+- Right Panel: Video display, detection results
+- Live Stats:
+  - Detection counts
+  - FPS
+  - Progress and time remaining
+- Post-processing:
+  - Download results
+  - Stop detection anytime
 
-2. Upload a video using the file uploader
+---
 
-3. Configure detection settings in the sidebar:
-   - Select the model to use
-   - Adjust confidence threshold
-   - Set display options
-   - Configure alert settings
+## Automatic Notification System
 
-4. Click "Start Detection" to begin processing
+If a fire is detected:
+- An alert message is automatically sent to emergency personnel.
+- The message includes:
+  - Time of detection
+  - Camera location (predefined per feed)
+  - Snapshot of the incident
 
-5. Monitor real-time statistics:
-   - Fire and smoke detection counts
-   - Processing FPS
-   - Progress bar
-   - Elapsed and remaining time
-
-6. After processing completes:
-   - View the final statistics
-   - Download the processed video with annotations
-
-7. Click "Stop Detection" at any time to halt processing
+---
 
 ## Model Training Results
 
-The YOLOv8 model was trained for 5 epochs with the following results:
+Trained over 5 epochs:
 
-- **Epoch 1**: mAP50 66.0%, mAP50-95 45.8%
-- **Epoch 2**: mAP50 74.1%, mAP50-95 53.1%
-- **Epoch 3**: mAP50 79.8%, mAP50-95 59.4%
-- **Epoch 4**: mAP50 82.2%, mAP50-95 63.2%
-- **Epoch 5**: mAP50 85.0%, mAP50-95 66.2%
+| Epoch | mAP50 | mAP50-95 |
+|-------|-------|----------|
+| 1     | 66.0% | 45.8%    |
+| 2     | 74.1% | 53.1%    |
+| 3     | 79.8% | 59.4%    |
+| 4     | 82.2% | 63.2%    |
+| 5     | 85.0% | 66.2%    |
 
-Final model performance:
-- Fire class: 92.1% mAP50, 71.3% mAP50-95
-- Smoke class: 77.7% mAP50, 61.0% mAP50-95
-- Overall precision: 87.4%, recall: 83.2%
+Final Performance:
+- Fire: 92.1% mAP50, 71.3% mAP50-95
+- Smoke: 77.7% mAP50, 61.0% mAP50-95
+- Precision: 87.4%, Recall: 83.2%
 
-### Input
-- `Input.mp4`
-  <video src="Input.mp4" controls width="320" height="240"></video>
+---
 
-### Output
-- `Output.mp4`
-  <video src="Output.mp4" controls width="320" height="240"></video>
+## Demo
+
+### Input Video
+<video src="Input.mp4" controls width="320" height="240"></video>
+
+### Output Video
+<video src="Output.mp4" controls width="320" height="240"></video>
+
+---
 
 ## Understanding Detection Metrics
 
-- **mAP50**: Mean Average Precision at 50% IoU threshold - accuracy when considering detections with 50% overlap with ground truth as correct
-- **mAP50-95**: Average mAP across multiple IoU thresholds from 50% to 95% - a stricter metric requiring more precise bounding boxes
-- **Precision**: When the model predicts fire/smoke, how often it's correct (low false positives)
-- **Recall**: How many actual fire/smoke instances the model finds (low false negatives)
+- **mAP50**: Detections with IoU ≥ 50% considered correct
+- **mAP50-95**: Average mAP from IoU 50% to 95%
+- **Precision**: Percentage of detections that were correct
+- **Recall**: Percentage of actual instances that were detected
 
-## Tips for Dataset Creation
+---
 
-For best detection results, include:
+## Dataset Preparation Tips
 
-1. **Diverse Fire Images**:
-   - Different types of fires (indoor, outdoor, structural)
-   - Various sizes and distances
-   - Different lighting conditions
+Include:
+- Fire images of varying environments, distances, and light
+- Smoke in varying densities, colors, and sources
+- False positive scenarios like fog, steam, or bright lights
 
-2. **Diverse Smoke Images**:
-   - Various smoke types (white, gray, black)
-   - Different densities and distances
-   - Smoke with and without visible fire source
+---
 
-3. **Negative Examples**:
-   - Red/orange objects that aren't fire
-   - Fog/steam/clouds that aren't smoke
-   - Various lighting conditions that might be confused with fire/smoke
+## Data Utilities
 
-## Data Preparation Utilities
+```
+# Manual annotation
+python prepare_dataset.py annotate --output .
 
-This project includes utilities for dataset preparation:
+# Split into train/val/test
+python prepare_dataset.py split --source_images images/ --source_labels labels/ --dest_dir DATASET --create_yaml
 
-1. **Annotation Tool**: Create a manual annotation tool for labeling images
-   ```
-   python prepare_dataset.py annotate --output .
-   ```
+# Augment data
+python data_utils.py augment --source your_dataset_dir --output augmented_data --factor 3
 
-2. **Dataset Splitting**: Split a collection of images and labels into train/val/test sets
-   ```
-   python prepare_dataset.py split --source_images images/ --source_labels labels/ --dest_dir DATASET --create_yaml
-   ```
+# Extract frames from video
+python data_utils.py extract --video path/to/video.mp4 --output extracted_frames --interval 30
+```
 
-3. **Data Augmentation**: Augment your existing dataset to increase diversity
-   ```
-   python data_utils.py augment --source your_dataset_dir --output augmented_data --factor 3
-   ```
+---
 
-4. **Frame Extraction**: Extract frames from videos for annotation
-   ```
-   python data_utils.py extract --video path/to/video.mp4 --output extracted_frames --interval 30
-   ```
+## Acknowledgements
+
+This project was developed under the guidance and support of the faculty and peers at RV College of Engineering.
+
+---
+
+## Future Enhancements
+
+- Integrate GPS or real-time camera location mapping
+- Use real-world CCTV datasets
+- Account for traffic, occlusion, and dynamic environments
+- Integrate with city-wide alert systems or IoT networks
+
+---
+
+> Turning passive CCTV cameras into smart fire watchers.
