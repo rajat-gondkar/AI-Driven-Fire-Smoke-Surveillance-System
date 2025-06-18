@@ -2,14 +2,6 @@
 .streamlit/
 *.toml
 
-# Model files and weights
-*.pt
-*.pth
-*.weights
-*.onnx
-runs/
-weights/
-
 # Python
 __pycache__/
 *.py[cod]

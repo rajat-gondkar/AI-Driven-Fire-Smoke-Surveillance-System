@@ -247,13 +247,6 @@ from_number = "+1234567890"  # Your Twilio phone number
 to_number = "+1234567890"    # Recipient's phone number
 camera_location = "Main Entrance"  # Location of the camera
 ```
-
-⚠️ **Important Security Notes:**
-- Never commit `.streamlit/secrets.toml` to git
-- Keep your Twilio credentials secure
-- The `.gitignore` file is configured to prevent accidental commits of sensitive files
-- If you accidentally commit sensitive information, immediately rotate your credentials
-
 ---
 
 > Turning passive CCTV cameras into smart fire watchers.
