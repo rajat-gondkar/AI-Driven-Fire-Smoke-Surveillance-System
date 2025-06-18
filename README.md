@@ -116,7 +116,7 @@ Optional flags:
 ### 3. Run Web App
 
 ```
-streamlit run streamlit_app.py
+streamlit run streamlit_app_new.py
 ```
 
 ---
