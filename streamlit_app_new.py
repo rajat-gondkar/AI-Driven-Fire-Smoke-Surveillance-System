@@ -7,6 +7,8 @@ import time
 from ultralytics import YOLO
 from PIL import Image
 import datetime
+import torch
+from twilio_config import TwilioAlert
 
 # Set page configuration
 st.set_page_config(
@@ -14,6 +16,11 @@ st.set_page_config(
     page_icon="🔥",
     layout="wide"
 )
+
+# Check CUDA availability
+cuda_available = torch.cuda.is_available()
+if not cuda_available:
+    st.warning("⚠️ CUDA is not available. The model will run on CPU, which may be significantly slower.")
 
 # Custom CSS for styling
 st.markdown("""
@@ -77,6 +84,28 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Initialize Twilio alert system
+@st.cache_resource
+def init_twilio():
+    try:
+        account_sid = st.secrets["twilio"]["account_sid"]
+        auth_token = st.secrets["twilio"]["auth_token"]
+        from_number = st.secrets["twilio"]["from_number"]
+        to_number = st.secrets["twilio"]["to_number"]
+        camera_location = st.secrets["twilio"]["camera_location"]
+        
+        print(f"Initializing Twilio with:")
+        print(f"Account SID: {account_sid}")
+        print(f"From Number: {from_number}")
+        print(f"To Number: {to_number}")
+        print(f"Camera Location: {camera_location}")
+        
+        return TwilioAlert(account_sid, auth_token, from_number)
+    except Exception as e:
+        print(f"Error initializing Twilio: {str(e)}")
+        st.error(f"Error initializing Twilio alert system: {str(e)}")
+        return None
+
 # Initialize session state for storing detection results and processing status
 if 'processing' not in st.session_state:
     st.session_state.processing = False
@@ -96,14 +125,26 @@ if 'total_frames' not in st.session_state:
     st.session_state.total_frames = 0
 if 'output_path' not in st.session_state:
     st.session_state.output_path = None
+if 'twilio_alert' not in st.session_state:
+    st.session_state.twilio_alert = init_twilio()
 
 # Header
 st.markdown('<h1 class="main-header">🔥 Fire and Smoke Detection System</h1>', unsafe_allow_html=True)
 
 # Load the model
 @st.cache_resource
-def load_model(model_path):
-    return YOLO(model_path)
+def load_model(model_path, device='cuda'):
+    try:
+        print(f"Loading model from: {model_path}")
+        model = YOLO(model_path)
+        # Force model to specified device
+        model.to(device)
+        print(f"Model loaded successfully on device: {device}")
+        return model
+    except Exception as e:
+        print(f"Error loading model: {str(e)}")
+        st.error(f"Error loading model: {str(e)}")
+        return None
 
 # Function to resize frame for faster processing
 def resize_frame(frame, scale_factor):
@@ -125,6 +166,10 @@ with col1:
     st.markdown('<h2 class="sub-header">Upload Video</h2>', unsafe_allow_html=True)
     uploaded_file = st.file_uploader("Choose a video file", type=["mp4", "avi", "mov"])
     
+    # Alert configuration
+    st.subheader("Alert Configuration")
+    enable_alerts = st.checkbox("Enable SMS Alerts", value=True)
+    
     # Model selection
     model_path = st.selectbox(
         "Select Model",
@@ -133,6 +178,14 @@ with col1:
             "runs/detect/fire_smoke_detection2/weights/last.pt",
         ],
         index=0
+    )
+    
+    # Device selection
+    device = st.selectbox(
+        "Select Device",
+        ["cuda", "cpu"],
+        index=0,
+        help="Select 'cuda' for GPU acceleration (if available) or 'cpu' for CPU processing"
     )
     
     # Confidence threshold
@@ -203,6 +256,10 @@ with col2:
 
 # Process video function
 def process_video(video_path, model, conf_threshold):
+    if model is None:
+        st.error("Model not loaded properly. Please try again.")
+        return
+        
     # Create output directory if it doesn't exist
     os.makedirs("static/results", exist_ok=True)
     
@@ -214,6 +271,10 @@ def process_video(video_path, model, conf_threshold):
     # Open the video file
     cap = cv2.VideoCapture(video_path)
     
+    if not cap.isOpened():
+        st.error("Error opening video file")
+        return
+        
     # Get video properties
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -239,91 +300,127 @@ def process_video(video_path, model, conf_threshold):
     start_time_total = time.time()
     
     while cap.isOpened() and st.session_state.processing:
-        # Start time for FPS calculation
-        start_time = time.time()
-        
-        # Read a frame
-        ret, frame = cap.read()
-        if not ret:
-            break
-        
-        # Skip frames for performance if needed
-        if frame_skip > 0:
-            skip_counter = (skip_counter + 1) % (frame_skip + 1)
-            if skip_counter != 0:
-                frame_idx += 1
-                continue
-        
-        # Store original size
-        original_size = frame.shape
-        
-        # Resize frame for faster processing
-        resized_frame = resize_frame(frame, resize_factor)
-        
-        # Perform detection
-        results = model(resized_frame, conf=conf_threshold)
-        
-        # Process results
-        result_frame = results[0].plot(labels=show_labels, conf=show_conf)
-        
-        # Count detections in this frame
-        frame_fire_count = 0
-        frame_smoke_count = 0
-        
-        for detection in results[0].boxes.data.tolist():
-            class_id = int(detection[5])
-            confidence = detection[4]
+        try:
+            # Start time for FPS calculation
+            start_time = time.time()
             
-            if class_id == 0:  # Fire class
-                frame_fire_count += 1
-                st.session_state.fire_detected = True
-            elif class_id == 1:  # Smoke class
-                frame_smoke_count += 1
-                st.session_state.smoke_detected = True
-        
-        # Update statistics
-        st.session_state.fire_detections += frame_fire_count
-        st.session_state.smoke_detections += frame_smoke_count
-        st.session_state.processed_frames += 1
-        
-        # Calculate FPS
-        process_time = time.time() - start_time
-        current_fps = 1 / process_time if process_time > 0 else 0
-        st.session_state.current_fps = current_fps
-        
-        # Add alert indicators to the frame
-        if st.session_state.fire_detected:
-            cv2.putText(result_frame, "FIRE ALERT!", (result_frame.shape[1] - 250, 50), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-        
-        if st.session_state.smoke_detected:
-            cv2.putText(result_frame, "SMOKE ALERT!", (result_frame.shape[1] - 250, 90), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (128, 128, 128), 2)
-        
-        # Display FPS on the frame
-        if display_fps:
-            cv2.putText(result_frame, f"FPS: {current_fps:.2f}", (10, 30), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        
-        # If frame was resized, resize back to original for display
-        if resize_factor != 1.0 and original_size is not None:
-            result_frame = cv2.resize(result_frame, (original_size[1], original_size[0]))
-        
-        # Save to video if enabled
-        if save_video:
-            out.write(result_frame)
-        
-        # Convert to RGB for Streamlit display
-        result_frame_rgb = cv2.cvtColor(result_frame, cv2.COLOR_BGR2RGB)
-        
-        # Display the frame
-        video_display.image(result_frame_rgb, caption="Detection in progress", use_container_width=True)
-        
-        # Increment frame index
-        frame_idx += 1
-        
-        # Add a small delay to control frame rate and prevent UI freezing
-        time.sleep(0.001)
+            # Read a frame
+            ret, frame = cap.read()
+            if not ret:
+                break
+            
+            # Skip frames for performance if needed
+            if frame_skip > 0:
+                skip_counter = (skip_counter + 1) % (frame_skip + 1)
+                if skip_counter != 0:
+                    frame_idx += 1
+                    continue
+            
+            # Store original size
+            original_size = frame.shape
+            
+            # Resize frame for faster processing
+            resized_frame = resize_frame(frame, resize_factor)
+            
+            # Perform detection
+            try:
+                results = model(resized_frame, conf=conf_threshold)
+            except Exception as e:
+                print(f"Error during model inference: {str(e)}")
+                st.error(f"Error during model inference: {str(e)}")
+                break
+                
+            # Process results
+            result_frame = results[0].plot(labels=show_labels, conf=show_conf)
+            
+            # Count detections in this frame
+            frame_fire_count = 0
+            frame_smoke_count = 0
+            
+            for detection in results[0].boxes.data.tolist():
+                class_id = int(detection[5])
+                confidence = detection[4]
+                
+                if class_id == 0:  # Fire class
+                    frame_fire_count += 1
+                    print(f"\nFIRE DETECTED! Confidence: {confidence:.2f}")
+                    if not st.session_state.fire_detected and enable_alerts:
+                        st.session_state.fire_detected = True
+                        print("Triggering fire alert...")
+                        alert_sent = st.session_state.twilio_alert.send_alert(
+                            st.secrets["twilio"]["to_number"], 
+                            'fire', 
+                            st.secrets["twilio"]["camera_location"]
+                        )
+                        print(f"Fire alert sent: {alert_sent}")
+                
+                elif class_id == 1:  # Smoke class
+                    frame_smoke_count += 1
+                    print(f"\nSMOKE DETECTED! Confidence: {confidence:.2f}")
+                    if not st.session_state.smoke_detected and enable_alerts:
+                        st.session_state.smoke_detected = True
+                        print("Triggering smoke alert...")
+                        alert_sent = st.session_state.twilio_alert.send_alert(
+                            st.secrets["twilio"]["to_number"], 
+                            'smoke', 
+                            st.secrets["twilio"]["camera_location"]
+                        )
+                        print(f"Smoke alert sent: {alert_sent}")
+            
+            # Update statistics
+            st.session_state.fire_detections += frame_fire_count
+            st.session_state.smoke_detections += frame_smoke_count
+            st.session_state.processed_frames += 1
+            
+            # Calculate FPS
+            process_time = time.time() - start_time
+            current_fps = 1 / process_time if process_time > 0 else 0
+            st.session_state.current_fps = current_fps
+            
+            # Add alert indicators to the frame
+            if st.session_state.fire_detected:
+                cv2.putText(result_frame, "FIRE ALERT!", (result_frame.shape[1] - 250, 50), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            
+            if st.session_state.smoke_detected:
+                cv2.putText(result_frame, "SMOKE ALERT!", (result_frame.shape[1] - 250, 90), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (128, 128, 128), 2)
+            
+            # Display FPS on the frame
+            if display_fps:
+                cv2.putText(result_frame, f"FPS: {current_fps:.2f}", (10, 30), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            
+            # If frame was resized, resize back to original for display
+            if resize_factor != 1.0 and original_size is not None:
+                result_frame = cv2.resize(result_frame, (original_size[1], original_size[0]))
+            
+            # Save to video if enabled
+            if save_video:
+                out.write(result_frame)
+            
+            # Convert to RGB for Streamlit display
+            result_frame_rgb = cv2.cvtColor(result_frame, cv2.COLOR_BGR2RGB)
+            
+            # Display the frame
+            video_display.image(result_frame_rgb, caption="Detection in progress", width=800)
+            
+            # Increment frame index
+            frame_idx += 1
+            
+            # Add a small delay to control frame rate and prevent UI freezing
+            time.sleep(0.001)
+            
+            # Reset detection status if no detections in current frame
+            if frame_fire_count == 0:
+                st.session_state.fire_detected = False
+            if frame_smoke_count == 0:
+                st.session_state.smoke_detected = False
+            
+        except Exception as e:
+            print(f"Error processing frame: {str(e)}")
+            st.error(f"Error processing frame: {str(e)}")
+            break
     
     # Calculate total processing time
     total_time = time.time() - start_time_total
@@ -347,7 +444,10 @@ if uploaded_file is not None:
     
     # Load model
     with st.spinner("Loading model..."):
-        model = load_model(model_path)
+        model = load_model(model_path, device)
+        if model is None:
+            st.error("Failed to load model. Please check the model path and try again.")
+            st.stop()
     
     if start_button:
         st.session_state.processing = True

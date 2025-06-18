@@ -226,4 +226,34 @@ This project was developed under the guidance and support of the faculty and pee
 
 ---
 
+## Setting Up Secrets
+
+1. Create a `.streamlit` directory in your project root:
+```bash
+mkdir .streamlit
+```
+
+2. Copy the secrets template:
+```bash
+cp .streamlit/secrets.template.toml .streamlit/secrets.toml
+```
+
+3. Edit `.streamlit/secrets.toml` with your actual credentials:
+```toml
+[twilio]
+account_sid = "your_account_sid_here"
+auth_token = "your_auth_token_here"
+from_number = "+1234567890"  # Your Twilio phone number
+to_number = "+1234567890"    # Recipient's phone number
+camera_location = "Main Entrance"  # Location of the camera
+```
+
+⚠️ **Important Security Notes:**
+- Never commit `.streamlit/secrets.toml` to git
+- Keep your Twilio credentials secure
+- The `.gitignore` file is configured to prevent accidental commits of sensitive files
+- If you accidentally commit sensitive information, immediately rotate your credentials
+
+---
+
 > Turning passive CCTV cameras into smart fire watchers.
