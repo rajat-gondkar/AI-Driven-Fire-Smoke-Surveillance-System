@@ -30,7 +30,7 @@ def create_dataset_yaml(data_path):
     print(f"Created dataset configuration at {yaml_path}")
     return yaml_path
 
-def train_model(data_yaml, epochs=5, batch_size=16, img_size=640, weights='yolov8m.pt'):
+def train_model(data_yaml, epochs=15, batch_size=16, img_size=640, weights='yolov8m.pt'):
     """
     Train a YOLOv8 model for fire and smoke detection
     """
@@ -46,8 +46,8 @@ def train_model(data_yaml, epochs=5, batch_size=16, img_size=640, weights='yolov
         batch=batch_size,
         name='fire_smoke_detection',
         verbose=True,
-        patience=2,  # Early stopping after 2 epochs with no improvement
-        device='cpu',  # Use CPU since no GPU is available
+        patience=3,  # Early stopping after 2 epochs with no improvement
+        device='0',  # Use CPU since no GPU is available
         save_period=1,  # Save model after every epoch
         save=True,     # Save the final model
     )
@@ -60,7 +60,7 @@ def main():
     parser = argparse.ArgumentParser(description='Train YOLOv8 model for fire and smoke detection')
     parser.add_argument('--data_path', type=str, default='DATASET', 
                         help='Path to the dataset directory')
-    parser.add_argument('--epochs', type=int, default=5,
+    parser.add_argument('--epochs', type=int, default=15,
                         help='Number of training epochs')
     parser.add_argument('--batch', type=int, default=16,
                         help='Batch size')
