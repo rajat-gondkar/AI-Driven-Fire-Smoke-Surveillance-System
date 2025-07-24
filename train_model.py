@@ -48,7 +48,7 @@ def train_model(data_yaml, epochs=40, batch_size=16, img_size=640, weights='yolo
         verbose=True,
         patience=3,  # Early stopping after 2 epochs with no improvement
         device='0',  # Use CPU since no GPU is available
-        save_period=1,  # Save model after every epoch
+      #  save_period=1,  # Save model after every epoch
         save=True,     # Save the final model
     )
     
